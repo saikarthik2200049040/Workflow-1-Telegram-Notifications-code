@@ -1,0 +1,58 @@
+import requests
+import pandas as pd
+from googleapiclient.discovery import build
+import telegram
+
+# YouTube API setup
+YOUTUBE_API_KEY = 'YOUR_YOUTUBE_API_KEY'
+CHANNEL_ID = 'SPECIFIC_CHANNEL_ID'
+
+# Telegram API setup
+TELEGRAM_BOT_TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'
+TELEGRAM_GROUP_ID = 'YOUR_TELEGRAM_GROUP_ID'
+
+# Excel setup
+EXCEL_FILE = 'sales_team_videos.xlsx'
+
+def get_latest_video(channel_id):
+    youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
+    request = youtube.search().list(part='snippet', channelId=channel_id, maxResults=1, order='date')
+    response = request.execute()
+    return response['items'][0] if response['items'] else None
+
+def send_telegram_message(message):
+    bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
+    bot.send_message(chat_id=TELEGRAM_GROUP_ID, text=message)
+
+def update_excel(video_details):
+    df = pd.read_excel(EXCEL_FILE)
+    df = df.append(video_details, ignore_index=True)
+    df.to_excel(EXCEL_FILE, index=False)
+
+def main():
+    video = get_latest_video(CHANNEL_ID)
+    if video:
+        video_id = video['id']['videoId']
+        title = video['snippet']['title']
+        description = video['snippet']['description']
+        published_at = video['snippet']['publishedAt']
+        video_url = f"https://www.youtube.com/watch?v={video_id}"
+        
+        # Send notification on Telegram
+        message = f"New video uploaded: {title}\\n{description}\\nWatch here: {video_url}"
+        send_telegram_message(message)
+        
+        # Update Excel sheet
+        video_details = {
+            'Title': title,
+            'Description': description,
+            'URL': video_url,
+            'Published At': published_at
+        }
+        update_excel(video_details)
+
+if __name__ == "__main__":
+    main()
+"""
+
+add_code_slide(prs, "Workflow 1: Code Implementation", code_telegram)
